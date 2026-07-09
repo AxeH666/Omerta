@@ -7,6 +7,7 @@ import signal
 import sys
 import threading
 from collections.abc import Callable
+from datetime import UTC, datetime
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as pkg_version
 from pathlib import Path
@@ -38,7 +39,13 @@ from strix.interface.tui.messages import send_user_message_to_agent
 from strix.interface.tui.renderers import render_tool_widget
 from strix.interface.tui.renderers.agent_message_renderer import AgentMessageRenderer
 from strix.interface.tui.renderers.user_message_renderer import UserMessageRenderer
-from strix.interface.utils import build_tui_stats_text
+from strix.interface.utils import (
+    build_tui_stats_text,
+    format_agent_counts,
+    format_elapsed,
+    format_turn_budget,
+    scan_phase_label,
+)
 from strix.report.state import ReportState, set_global_report_state
 from strix.runtime import session_manager
 
@@ -1214,6 +1221,27 @@ class StrixTUIApp(App):  # type: ignore[misc]
         stats_text = build_tui_stats_text(self.report_state)
         if stats_text:
             stats_content.append(stats_text)
+
+        # Honest live feedback (additive). Phase/elapsed/turns from the real
+        # report_state; agent counts from the live coordinator status map
+        # (self.coordinator is the same instance the scan drives).
+        report_state = self.report_state
+        if report_state:
+            stats_content.append("\n")
+            stats_content.append(scan_phase_label(report_state), style="white")
+            stats_content.append("\n")
+            stats_content.append(
+                format_elapsed(report_state.start_time, datetime.now(UTC)), style="white"
+            )
+            agent_counts = format_agent_counts(self.coordinator.statuses)
+            if agent_counts:
+                stats_content.append("\n")
+                stats_content.append(agent_counts, style="white")
+            stats_content.append("\n")
+            stats_content.append(
+                format_turn_budget(report_state.model_turns, report_state.max_turns),
+                style="white",
+            )
 
         version = get_package_version()
         stats_content.append(f"\nv{version}", style="white")
