@@ -1,0 +1,39 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(.env*)",
+      "Read(**/.env*)",
+      "Read(**/secrets/**)",
+      "Bash(rm -rf *)",
+      "Bash(rm -r *)",
+      "Bash(git push --force *)",
+      "Bash(git push -f *)",
+      "Bash(git reset --hard *)",
+      "Bash(git clean -f *)",
+      "Bash(git branch -D *)",
+      "Bash(curl * | bash)",
+      "Bash(wget * | bash)",
+      "Bash(cat .env*)",
+      "Bash(printenv *)",
+      "Edit(.claude/settings.json)",
+      "Edit(LICENSE)",
+      "Edit(NOTICE)"
+    ],
+    "ask": [
+      "Bash(git push *)",
+      "Bash(uv pip install *)",
+      "Bash(pip install *)",
+      "Bash(npm install *)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": ".claude/hooks/block-dangerous.sh" }
+        ]
+      }
+    ]
+  }
+}
