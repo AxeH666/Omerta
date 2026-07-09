@@ -10,6 +10,7 @@ from uuid import uuid4
 
 from agents.usage import Usage
 
+from strix.core.inputs import DEFAULT_MAX_TURNS
 from strix.core.paths import run_dir_for
 from strix.report.sarif import write_sarif
 from strix.report.usage import LLMUsageLedger
@@ -113,6 +114,13 @@ class ReportState:
 
         self.vulnerability_reports: list[dict[str, Any]] = []
         self.final_scan_result: str | None = None
+
+        # Live model-turn counter (incremented once per model response by
+        # ReportUsageHooks.on_llm_end) plus the turn budget it runs against.
+        # The budget default mirrors DEFAULT_MAX_TURNS, which otherwise stops
+        # at the runner/execution layer and is not exposed to the UI.
+        self.model_turns: int = 0
+        self.max_turns: int = DEFAULT_MAX_TURNS
 
         self.scan_results: dict[str, Any] | None = None
         self.scan_config: dict[str, Any] | None = None

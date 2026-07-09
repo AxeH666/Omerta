@@ -43,6 +43,8 @@ class ReportUsageHooks(RunHooks[dict[str, Any]]):
         if report_state is None:
             return
 
+        report_state.model_turns += 1
+
         ctx = context.context if isinstance(context.context, dict) else {}
         agent_name = getattr(agent, "name", None)
         if not isinstance(agent_name, str):
