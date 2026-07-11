@@ -70,8 +70,9 @@ snapshot — no change to the scan call signature.
 
 ---
 
-## PR #4 — goal-4: Omerta rebrand + mafia-noir/cyberpunk UI  🔄 IN PROGRESS
-Branch: `goal-4-omerta-rebrand` → `main`
+## PR #4 — goal-4: Omerta rebrand + mafia-noir/cyberpunk UI  ✅ MERGED
+Branch: `goal-4-omerta-rebrand` → `main` (merge commit `fc58ae5`)
+Bugbot: ✅ no new issues.
 
 Rebased via `git rebase --onto main 406f66f` (goal-4's 8 commits only, skipping
 the already-merged goal-3 commits). One conflict, in `cli.py`: goal-4 rethemed
@@ -93,3 +94,29 @@ a `strix` alias). Opening PR, awaiting bugbot.
 Note: the pyproject `[project.scripts]` change makes `uv run` want to rebuild
 offline (no cached hatchling) — run tests with `.venv/bin/python -m pytest`; a
 networked `uv sync` resolves it and also generates the `omerta` launcher.
+
+---
+
+## ✅ Pipeline complete — final state
+
+All four goals are merged into `main`, one PR at a time (no stacking), every
+bugbot finding read via the GitHub API and fixed before merge:
+
+| PR | Goal | Bugbot findings | Result |
+|----|------|-----------------|--------|
+| #1 | honest scan feedback (+ recon docs, guardrails) | 3 Medium — all fixed | merged |
+| #2 | doctor command + friendly messages | 1 Medium — fixed | merged |
+| #3 | live agent activity in the CLI | 0 | merged |
+| #4 | Omerta rebrand + noir/cyberpunk UI | 0 | merged |
+
+**Verified on `main`:** full suite **177 passed**; `omerta` and `strix`
+entrypoints both work; `omerta doctor` runs end-to-end and renders the OMERTA
+brand with honest ✅/❌ probes (it correctly reports this container's missing
+Docker + `STRIX_LLM`).
+
+**Run the tests:** `.venv/bin/python -m pytest tests/ -q`
+(Use the venv Python, not `uv run` — the pyproject `[project.scripts]` change
+wants an offline rebuild the sandbox can't do; a networked `uv sync` fixes it
+and generates the `omerta` launcher.)
+
+**Branches:** all `goal-*` feature branches merged and deleted (local + remote).
