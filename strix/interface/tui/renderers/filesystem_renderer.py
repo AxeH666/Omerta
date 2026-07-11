@@ -159,7 +159,7 @@ def _render_operation(text: Text, kind: str, path: str, old: list[str], new: lis
             highlighted_new = _highlight_code("\n".join(new), path)
             for line in highlighted_new.plain.split("\n"):
                 text.append("\n")
-                text.append("+", style="#22c55e")
+                text.append("+", style="#22d3ee")
                 text.append(" ")
                 text.append(line)
     elif kind == "add" and new:
@@ -261,6 +261,6 @@ class ViewImageRenderer(BaseToolRenderer):
             text.append(err, style="#ef4444")
         elif _is_image_success(result):
             text.append("  ")
-            text.append("✓", style="#22c55e")
+            text.append("✓", style="#22d3ee")
 
         return Static(text, classes=cls.get_css_classes(status))

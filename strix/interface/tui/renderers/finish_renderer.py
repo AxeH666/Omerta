@@ -25,8 +25,8 @@ class FinishScanRenderer(BaseToolRenderer):
         recommendations = args.get("recommendations", "")
 
         text = Text()
-        text.append("◆ ", style="#22c55e")
-        text.append("Penetration test completed", style="bold #22c55e")
+        text.append("◆ ", style="#22d3ee")
+        text.append("The job is done", style="bold #22d3ee")
 
         if executive_summary:
             text.append("\n\n")

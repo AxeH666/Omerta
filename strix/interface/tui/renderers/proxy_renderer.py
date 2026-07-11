@@ -25,7 +25,7 @@ def _status_style(code: int | None) -> str:
     if code is None:
         return "dim"
     if 200 <= code < 300:
-        return "#22c55e"  # green
+        return "#22d3ee"  # green
     if 300 <= code < 400:
         return "#eab308"  # yellow
     if 400 <= code < 500:
@@ -163,7 +163,7 @@ class ViewRequestRenderer(BaseToolRenderer):
 
                         if before:
                             text.append(f"...{before}", style="dim")
-                        text.append(match_text, style="#22c55e bold")
+                        text.append(match_text, style="#22d3ee bold")
                         if after:
                             text.append(f"{after}...", style="dim")
 
@@ -274,7 +274,7 @@ class RepeatRequestRenderer(BaseToolRenderer):
                 )
 
                 text.append("\n")
-                text.append("  << ", style="#22c55e")
+                text.append("  << ", style="#22d3ee")
                 if code:
                     text.append(f"{code}", style=_status_style(code))
                 else:
@@ -286,7 +286,7 @@ class RepeatRequestRenderer(BaseToolRenderer):
                     lines = body.split("\n")[:5]
                     for line in lines:
                         text.append("\n")
-                        text.append("  << ", style="#22c55e")
+                        text.append("  << ", style="#22d3ee")
                         text.append(_truncate(line, MAX_LINE_LENGTH - 5), style="dim")
 
                     if body_truncated or len(body.split("\n")) > 5:
@@ -349,7 +349,7 @@ class ListSitemapRenderer(BaseToolRenderer):
                         kind_style = {
                             "DOMAIN": "#f59e0b",
                             "DIRECTORY": "#3b82f6",
-                            "REQUEST": "#22c55e",
+                            "REQUEST": "#22d3ee",
                         }.get(kind, "dim")
 
                         text.append("  ")
@@ -507,7 +507,7 @@ class ScopeRulesRenderer(BaseToolRenderer):
                         name = scope.get("name", "?")
                         allow = scope.get("allowlist") or []
                         text.append("  ")
-                        text.append(_truncate(str(name), 40), style="#22c55e")
+                        text.append(_truncate(str(name), 40), style="#22d3ee")
                         if allow and isinstance(allow, list):
                             allow_str = ", ".join(_truncate(str(a), 30) for a in allow[:3])
                             text.append(f"  {allow_str}", style="dim")
@@ -530,7 +530,7 @@ class ScopeRulesRenderer(BaseToolRenderer):
                         text.append(f"\n  deny: {deny_str}", style="dim")
 
             elif "message" in result:
-                text.append(f"  {result['message']}", style="#22c55e")
+                text.append(f"  {result['message']}", style="#22d3ee")
 
         css_classes = cls.get_css_classes(status)
         return Static(text, classes=css_classes)

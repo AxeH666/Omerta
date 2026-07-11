@@ -34,6 +34,7 @@ from textual.widgets.tree import TreeNode
 from strix.config import load_settings
 from strix.core.hooks import BudgetExceededError
 from strix.core.runner import run_strix_scan
+from strix.interface import theme
 from strix.interface.tui.live_view import TuiLiveView
 from strix.interface.tui.messages import send_user_message_to_agent
 from strix.interface.tui.renderers import render_tool_widget
@@ -108,15 +109,9 @@ class ChatTextArea(TextArea):  # type: ignore[misc]
 
 class SplashScreen(Static):  # type: ignore[misc]
     ALLOW_SELECT = False
-    PRIMARY_GREEN = "#22c55e"
-    BANNER = (
-        " ███████╗████████╗██████╗ ██╗██╗  ██╗\n"
-        " ██╔════╝╚══██╔══╝██╔══██╗██║╚██╗██╔╝\n"
-        " ███████╗   ██║   ██████╔╝██║ ╚███╔╝\n"
-        " ╚════██║   ██║   ██╔══██╗██║ ██╔██╗\n"
-        " ███████║   ██║   ██║  ██║██║██╔╝ ██╗\n"
-        " ╚══════╝   ╚═╝   ╚═╝  ╚═╝╚═╝╚═╝  ╚═╝"
-    )
+    BRAND_ACCENT = theme.BLOOD
+    SIGNAL_ACCENT = theme.NEON_CYAN
+    BANNER = theme.WORDMARK
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
@@ -154,7 +149,7 @@ class SplashScreen(Static):  # type: ignore[misc]
 
     def _build_panel(self, start_line: Text) -> Panel:
         content = Group(
-            Align.center(Text(self.BANNER.strip("\n"), style=self.PRIMARY_GREEN, justify="center")),
+            Align.center(Text(self.BANNER.strip("\n"), style=self.BRAND_ACCENT, justify="center")),
             Align.center(Text(" ")),
             Align.center(self._build_welcome_text()),
             Align.center(self._build_version_text()),
@@ -165,25 +160,24 @@ class SplashScreen(Static):  # type: ignore[misc]
             Align.center(self._build_url_text()),
         )
 
-        return Panel.fit(content, border_style=self.PRIMARY_GREEN, padding=(1, 6))
+        return Panel.fit(content, border_style=self.BRAND_ACCENT, padding=(1, 6))
 
     def _build_url_text(self) -> Text:
-        return Text("strix.ai", style=Style(color=self.PRIMARY_GREEN, bold=True))
+        return Text("docs.strix.ai", style=Style(color=self.SIGNAL_ACCENT, dim=True))
 
     def _build_welcome_text(self) -> Text:
-        text = Text("Welcome to ", style=Style(color="white", bold=True))
-        text.append("Strix", style=Style(color=self.PRIMARY_GREEN, bold=True))
-        text.append("!", style=Style(color="white", bold=True))
+        text = Text("Welcome to ", style=Style(color=theme.BONE, bold=True))
+        text.append(theme.BRAND, style=Style(color=self.BRAND_ACCENT, bold=True))
         return text
 
     def _build_version_text(self) -> Text:
-        return Text(f"v{self._version}", style=Style(color="white", dim=True))
+        return Text(f"v{self._version}", style=Style(color=theme.BONE, dim=True))
 
     def _build_tagline_text(self) -> Text:
-        return Text("Open-source AI hackers for your apps", style=Style(color="white", dim=True))
+        return Text(theme.TAGLINE, style=Style(color=self.SIGNAL_ACCENT, italic=True))
 
     def _build_start_line_text(self, phase: int) -> Text:
-        full_text = "Starting Strix Agent"
+        full_text = "Opening the contract"
         text_len = len(full_text)
 
         shine_pos = phase % (text_len + 8)
@@ -209,7 +203,7 @@ class SplashScreen(Static):  # type: ignore[misc]
 class HelpScreen(ModalScreen):  # type: ignore[misc]
     def compose(self) -> ComposeResult:
         yield Grid(
-            Label("Strix Help", id="help_title"),
+            Label(f"{theme.BRAND} Help", id="help_title"),
             Label(
                 "F1        Help\nCtrl+Q/C  Quit\nESC       Stop Agent\n"
                 "Enter     Send message to agent\nTab       Switch panels\n↑/↓       Navigate tree",
@@ -275,7 +269,7 @@ class VulnerabilityDetailScreen(ModalScreen):  # type: ignore[misc]
         "critical": "#dc2626",  # Red
         "high": "#ea580c",  # Orange
         "medium": "#d97706",  # Amber
-        "low": "#22c55e",  # Green
+        "low": "#65a30d",  # Muted olive (noir-toned low)
         "info": "#3b82f6",  # Blue
     }
 
@@ -595,7 +589,7 @@ class VulnerabilitiesPanel(VerticalScroll):  # type: ignore[misc]
         "critical": "#dc2626",  # Red
         "high": "#ea580c",  # Orange
         "medium": "#d97706",  # Amber
-        "low": "#22c55e",  # Green
+        "low": "#65a30d",  # Muted olive (noir-toned low)
         "info": "#3b82f6",  # Blue
     }
 
@@ -638,7 +632,7 @@ class VulnerabilitiesPanel(VerticalScroll):  # type: ignore[misc]
 class QuitScreen(ModalScreen):  # type: ignore[misc]
     def compose(self) -> ComposeResult:
         yield Grid(
-            Label("Quit Strix?", id="quit_title"),
+            Label(f"Quit {theme.BRAND}?", id="quit_title"),
             Grid(
                 Button("Yes", variant="error", id="quit"),
                 Button("No", variant="default", id="cancel"),
@@ -728,13 +722,13 @@ class StrixTUIApp(App):  # type: ignore[misc]
         self._sweep_num_squares: int = 6
         self._sweep_colors: list[str] = [
             "#000000",  # Dimmest (shows dot)
-            "#031a09",
-            "#052e16",
-            "#0d4a2a",
-            "#15803d",
-            "#22c55e",
-            "#4ade80",
-            "#86efac",  # Brightest
+            "#03181a",
+            "#052e33",
+            "#0d4a52",
+            "#158593",
+            "#22d3ee",  # Neon cyan (signal)
+            "#67e8f9",
+            "#a5f3fc",  # Brightest
         ]
         self._dot_animation_timer: Any | None = None
 

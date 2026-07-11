@@ -35,7 +35,7 @@ LINE_STYLE = "#facc15"
 LABEL_STYLE = "italic #a1a1aa"
 CODE_STYLE = "#e2e8f0"
 BEFORE_STYLE = "#ef4444"
-AFTER_STYLE = "#22c55e"
+AFTER_STYLE = "#22d3ee"
 
 
 @register_tool_renderer
