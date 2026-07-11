@@ -44,7 +44,7 @@ from strix.core.paths import runtime_state_dir
 from strix.interface.utils import (
     build_live_stats_text,
     format_agent_counts,
-    format_turn_budget,
+    format_model_turns,
     scan_phase_label,
 )
 from strix.report.state import ReportState
@@ -276,11 +276,10 @@ def test_phase_label_unchanged() -> None:
     assert scan_phase_label(state) == "finalizing"
 
 
-def test_turn_budget_still_honest() -> None:
-    """The turn counter stays a budget, never a % complete."""
-    rendered = format_turn_budget(47, 500).lower()
+def test_model_turns_still_honest() -> None:
+    """The turn counter stays a plain count, never a % complete or fake budget."""
+    rendered = format_model_turns(47).lower()
     assert "47" in rendered
-    assert "500" in rendered
     assert "%" not in rendered
     assert "complete" not in rendered
 
