@@ -39,6 +39,12 @@ foundational recon docs and the guardrails hook.
 ## PR #2 — goal-2: doctor command + friendly messages  🔄 IN PROGRESS
 Branch: `goal-2-doctor` → `main`
 
-Rebased cleanly onto `main` (post-PR#1). Full suite green (163 passed).
-Adds the `doctor` preflight command and friendly, actionable env/setup
-probe messages. Opening PR and awaiting bugbot review.
+Rebased cleanly onto `main` (post-PR#1). Full suite green. Adds the `doctor`
+preflight command and friendly, actionable env/setup probe messages.
+
+**Bugbot finding (1, Medium) — fixed:**
+1. *Failure panel omits probe warnings* — `render_failure_panel` printed
+   title/guidance/detail but not `ProbeResult.warnings`, so a startup failure
+   (e.g. `STRIX_LLM` unset) dropped optional-var notes that `strix doctor`
+   still shows. → Append warnings to the panel (⚠ yellow, matching the doctor
+   report); added `test_13b` asserting they surface. 164 passed.

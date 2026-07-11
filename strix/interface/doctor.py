@@ -261,8 +261,12 @@ def render_doctor_report(results: list[ProbeResult], console: Console) -> None:
 def render_failure_panel(result: ProbeResult, console: Console) -> None:
     """Render a single failing probe as the red STRIX panel used at startup.
 
-    This is the reuse point: a startup crash site renders the exact same
-    ``result`` (title + guidance + raw detail) the doctor would show.
+    This is the reuse point: a startup crash site renders the same ``result``
+    (title + guidance + raw detail + non-fatal warnings) the doctor would show,
+    so the two surfaces never diverge. Warnings are included because
+    ``probe_llm_env`` attaches optional-var notes (e.g. LLM_API_KEY unset) even
+    on a hard failure, and dropping them here would hide guidance the doctor
+    still prints.
     """
     text = Text()
     text.append(result.title, style="bold red")
@@ -272,6 +276,9 @@ def render_failure_panel(result: ProbeResult, console: Console) -> None:
     if result.detail:
         text.append("\n\n")
         text.append(result.detail, style="dim")
+    for warning in result.warnings:
+        text.append("\n\n")
+        text.append(f"⚠  {warning}", style="yellow")
 
     panel = Panel(
         text,

@@ -337,6 +337,34 @@ def test_13_startup_reuses_the_same_env_probe_guidance(monkeypatch: pytest.Monke
     assert "SENTINEL_GUIDANCE_TOKEN_9Z" in sink.getvalue()
 
 
+def test_13b_startup_failure_panel_surfaces_probe_warnings(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The startup failure panel must show the probe's warnings, like doctor.
+
+    ``probe_llm_env`` attaches optional-var notes even on a hard failure
+    (e.g. STRIX_LLM unset). ``render_failure_panel`` must surface them so the
+    startup crash and ``strix doctor`` present the exact same result -- not a
+    lossy subset that silently drops the notes.
+    """
+    from strix.interface.doctor import ProbeResult
+
+    sentinel = ProbeResult(
+        ok=False,
+        title="LLM configuration",
+        guidance="Set STRIX_LLM",
+        detail="",
+        warnings=["OPTIONAL_WARNING_TOKEN_7Q is not set"],
+    )
+    monkeypatch.setattr(main_mod, "probe_llm_env", lambda _settings: sentinel, raising=False)
+
+    console, sink = _capture_console()
+    with pytest.raises(SystemExit):
+        main_mod.validate_environment(console=console)
+
+    assert "OPTIONAL_WARNING_TOKEN_7Q" in sink.getvalue()
+
+
 def test_14_normal_scan_invocation_still_parses(monkeypatch: pytest.MonkeyPatch) -> None:
     """REGRESSION GUARD: introducing subcommands must not break `strix --target ...`."""
     monkeypatch.setenv("STRIX_LLM", "openai/gpt-5.4")
