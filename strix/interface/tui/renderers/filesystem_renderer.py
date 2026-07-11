@@ -159,7 +159,7 @@ def _render_operation(text: Text, kind: str, path: str, old: list[str], new: lis
             highlighted_new = _highlight_code("\n".join(new), path)
             for line in highlighted_new.plain.split("\n"):
                 text.append("\n")
-                text.append("+", style="#22d3ee")
+                text.append("+", style="#65a30d")
                 text.append(" ")
                 text.append(line)
     elif kind == "add" and new:

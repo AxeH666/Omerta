@@ -45,6 +45,12 @@ DANGER = BLOOD_BRIGHT
 ACTIVE = NEON_CYAN
 DONE = "#65a30d"  # completed — muted olive, not a loud green
 
+# Diff colors deliberately keep the universal green-add / red-remove
+# convention — readability wins over palette purity where +/- lines are
+# involved. Green added, red removed; both stay distinct on near-black.
+DIFF_ADD = "#65a30d"  # added lines / fix_after
+DIFF_DEL = BLOOD_BRIGHT  # removed lines / fix_before
+
 
 # --- ASCII wordmark --------------------------------------------------------
 # Block-letter OMERTA. Rendered in BLOOD on the near-black terminal — a

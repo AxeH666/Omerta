@@ -49,6 +49,7 @@ vertex = ["google-auth>=2.0.0"]
 bedrock = ["boto3>=1.28.0"]
 
 [project.scripts]
+omerta = "strix.interface.main:main"
 strix = "strix.interface.main:main"
 
 [dependency-groups]
