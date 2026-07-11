@@ -10,6 +10,7 @@ import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
+import docker
 from agents.model_settings import ModelSettings
 from agents.models.interface import ModelTracing
 from docker.errors import DockerException
@@ -29,6 +30,19 @@ from strix.config.models import (
 )
 from strix.core.paths import run_dir_for, runtime_state_dir
 from strix.interface.cli import run_cli
+from strix.interface.doctor import (
+    ProbeResult,
+    _provider_import_hint,
+    doctor_exit_code,
+    probe_docker_cli,
+    probe_docker_daemon,
+    probe_docker_image,
+    probe_llm_connection,
+    probe_llm_env,
+    probe_llm_model_name,
+    render_doctor_report,
+    render_failure_panel,
+)
 from strix.interface.tui import run_tui
 from strix.interface.utils import (
     assign_workspace_subdirs,
@@ -64,130 +78,19 @@ import logging  # noqa: E402
 logger = logging.getLogger(__name__)
 
 
-def validate_environment() -> None:
+def validate_environment(console: Console | None = None) -> None:
     logger.info("Validating environment")
-    console = Console()
-    missing_required_vars = []
-    missing_optional_vars = []
+    if console is None:
+        console = Console()
 
-    settings = load_settings()
+    result = probe_llm_env(load_settings())
 
-    if not settings.llm.model:
-        missing_required_vars.append("STRIX_LLM")
-
-    if not settings.llm.api_key:
-        missing_optional_vars.append("LLM_API_KEY")
-
-    if not settings.llm.api_base:
-        missing_optional_vars.append("LLM_API_BASE")
-
-    if not settings.integrations.perplexity_api_key:
-        missing_optional_vars.append("PERPLEXITY_API_KEY")
-
-    if missing_required_vars:
-        error_text = Text()
-        error_text.append("MISSING REQUIRED ENVIRONMENT VARIABLES", style="bold red")
-        error_text.append("\n\n", style="white")
-
-        for var in missing_required_vars:
-            error_text.append(f"• {var}", style="bold yellow")
-            error_text.append(" is not set\n", style="white")
-
-        if missing_optional_vars:
-            error_text.append("\nOptional environment variables:\n", style="dim white")
-            for var in missing_optional_vars:
-                error_text.append(f"• {var}", style="dim yellow")
-                error_text.append(" is not set\n", style="dim white")
-
-        error_text.append("\nRequired environment variables:\n", style="white")
-        for var in missing_required_vars:
-            if var == "STRIX_LLM":
-                error_text.append("• ", style="white")
-                error_text.append("STRIX_LLM", style="bold cyan")
-                error_text.append(
-                    " - Model name to use (e.g., 'openai/gpt-5.4' or "
-                    "'anthropic/claude-opus-4-7')\n",
-                    style="white",
-                )
-
-        if missing_optional_vars:
-            error_text.append("\nOptional environment variables:\n", style="white")
-            for var in missing_optional_vars:
-                if var == "LLM_API_KEY":
-                    error_text.append("• ", style="white")
-                    error_text.append("LLM_API_KEY", style="bold cyan")
-                    error_text.append(
-                        " - API key for the LLM provider "
-                        "(not needed for local models, Vertex AI, AWS, etc.)\n",
-                        style="white",
-                    )
-                elif var == "LLM_API_BASE":
-                    error_text.append("• ", style="white")
-                    error_text.append("LLM_API_BASE", style="bold cyan")
-                    error_text.append(
-                        " - Custom API base URL if using local models (e.g., Ollama, LMStudio)\n",
-                        style="white",
-                    )
-                elif var == "PERPLEXITY_API_KEY":
-                    error_text.append("• ", style="white")
-                    error_text.append("PERPLEXITY_API_KEY", style="bold cyan")
-                    error_text.append(
-                        " - API key for Perplexity AI web search (enables real-time research)\n",
-                        style="white",
-                    )
-                elif var == "STRIX_REASONING_EFFORT":
-                    error_text.append("• ", style="white")
-                    error_text.append("STRIX_REASONING_EFFORT", style="bold cyan")
-                    error_text.append(
-                        " - Reasoning effort level: none, minimal, low, medium, high, xhigh "
-                        "(default: high)\n",
-                        style="white",
-                    )
-
-        error_text.append("\nExample setup:\n", style="white")
-        error_text.append("export STRIX_LLM='openai/gpt-5.4'\n", style="dim white")
-
-        if missing_optional_vars:
-            for var in missing_optional_vars:
-                if var == "LLM_API_KEY":
-                    error_text.append(
-                        "export LLM_API_KEY='your-api-key-here'  "
-                        "# not needed for local models, Vertex AI, AWS, etc.\n",
-                        style="dim white",
-                    )
-                elif var == "LLM_API_BASE":
-                    error_text.append(
-                        "export LLM_API_BASE='http://localhost:11434'  "
-                        "# needed for local models only\n",
-                        style="dim white",
-                    )
-                elif var == "PERPLEXITY_API_KEY":
-                    error_text.append(
-                        "export PERPLEXITY_API_KEY='your-perplexity-key-here'\n", style="dim white"
-                    )
-                elif var == "STRIX_REASONING_EFFORT":
-                    error_text.append(
-                        "export STRIX_REASONING_EFFORT='high'\n",
-                        style="dim white",
-                    )
-
-        panel = Panel(
-            error_text,
-            title="[bold white]STRIX",
-            title_align="left",
-            border_style="red",
-            padding=(1, 2),
-        )
-
-        logger.error("Missing required env vars: %s", missing_required_vars)
-        console.print("\n")
-        console.print(panel)
-        console.print()
+    if not result.ok:
+        logger.error("Environment check failed: %s", result.title)
+        render_failure_panel(result, console)
         sys.exit(1)
-    logger.info(
-        "Environment OK (optional missing: %s)",
-        missing_optional_vars or "none",
-    )
+
+    logger.info("Environment OK (warnings: %s)", result.warnings or "none")
 
 
 def check_docker_installed() -> None:
@@ -212,26 +115,6 @@ def check_docker_installed() -> None:
         console.print("\n", panel, "\n")
         sys.exit(1)
     logger.debug("Docker CLI present")
-
-
-def _provider_import_hint(exc: BaseException, model: str) -> str | None:
-    """Return an install hint when *exc* is a missing provider dependency.
-
-    Bedrock and Vertex AI ship as optional extras: Bedrock needs ``boto3`` and
-    Vertex AI needs ``google-auth``. When either is absent, litellm raises an
-    ``ImportError``/``ModuleNotFoundError`` naming the missing package. Map that
-    back to the matching extra so the user knows what to install. Returns
-    ``None`` for any unrelated error.
-    """
-    if not isinstance(exc, ImportError):
-        return None
-    message = str(exc)
-    model_name = model.lower()
-    if "boto3" in message and model_name.startswith("bedrock/"):
-        return 'Bedrock support is optional. Install it with: pipx install "strix-agent[bedrock]"'
-    if "google" in message and "vertex" in model_name:
-        return 'Vertex AI support is optional. Install it with: pipx install "strix-agent[vertex]"'
-    return None
 
 
 async def warm_up_llm() -> None:
@@ -341,7 +224,7 @@ def _positive_budget(value: str) -> float:
     return budget
 
 
-def parse_arguments() -> argparse.Namespace:
+def parse_arguments(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Strix Multi-Agent Cybersecurity Penetration Testing Tool",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -387,6 +270,16 @@ Examples:
         "--version",
         action="version",
         version=f"strix {get_version()}",
+    )
+
+    # Optional subcommands. The normal scan invocation uses NO subcommand
+    # (``command`` defaults to ``None``), so every existing ``strix --target ...``
+    # form keeps working unchanged. ``strix doctor`` runs preflight checks and
+    # needs no target.
+    subparsers = parser.add_subparsers(dest="command")
+    subparsers.add_parser(
+        "doctor",
+        help="Run preflight environment checks (Docker, LLM config) and exit.",
     )
 
     parser.add_argument(
@@ -505,7 +398,12 @@ Examples:
         ),
     )
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
+
+    # The doctor subcommand takes no scan arguments -- skip all target/resume
+    # validation and hand the namespace straight back to main() to dispatch.
+    if getattr(args, "command", None) == "doctor":
+        return args
 
     if args.instruction and args.instruction_file:
         parser.error(
@@ -782,6 +680,88 @@ def pull_docker_image() -> None:
     console.print()
 
 
+def _doctor_llm_round_trip() -> None:
+    """One real LLM round-trip, used as ``run_check`` for the doctor.
+
+    Mirrors ``warm_up_llm`` but as a plain sync callable that raises on failure,
+    so ``probe_llm_connection`` can classify the error into a friendly result.
+    """
+    settings = load_settings()
+    configure_sdk_model_defaults(settings)
+    raw_model = (settings.llm.model or "").strip()
+    model = StrixProvider().get_model(raw_model)
+    asyncio.run(
+        asyncio.wait_for(
+            model.get_response(
+                system_instructions="You are a helpful assistant.",
+                input="Reply with just 'OK'.",
+                model_settings=ModelSettings(),
+                tools=[],
+                output_schema=None,
+                handoffs=[],
+                tracing=ModelTracing.DISABLED,
+                previous_response_id=None,
+                conversation_id=None,
+                prompt=None,
+            ),
+            timeout=settings.llm.timeout,
+        )
+    )
+
+
+def run_doctor(console: Console | None = None) -> int:
+    """Run every preflight probe, render the full report, return an exit code.
+
+    Uses the SAME probes the startup path uses. Every probe runs (no early
+    exit) so the user sees all problems at once. The live LLM round-trip only
+    runs when the config is coherent enough to make the attempt meaningful.
+    """
+    if console is None:
+        console = Console()
+
+    settings = load_settings()
+    results: list[ProbeResult] = []
+
+    results.append(probe_docker_cli())
+
+    daemon = probe_docker_daemon()
+    results.append(daemon)
+    if daemon.ok:
+        try:
+            client = docker.from_env()
+            results.append(probe_docker_image(client, settings.runtime.image))
+        except Exception as exc:
+            results.append(
+                ProbeResult(
+                    ok=False,
+                    title="Sandbox image",
+                    guidance="Could not query the sandbox image.",
+                    detail=str(exc),
+                )
+            )
+
+    env = probe_llm_env(settings)
+    results.append(env)
+    model_name = probe_llm_model_name(settings)
+    results.append(model_name)
+
+    if env.ok and model_name.ok:
+        results.append(
+            probe_llm_connection(settings.llm.model or "", run_check=_doctor_llm_round_trip)
+        )
+    else:
+        results.append(
+            ProbeResult(
+                ok=False,
+                title="LLM connection",
+                guidance="Skipped: resolve the LLM configuration above first.",
+            )
+        )
+
+    render_doctor_report(results, console)
+    return doctor_exit_code(results)
+
+
 def main() -> None:
     configure_dependency_logging()
 
@@ -792,6 +772,9 @@ def main() -> None:
 
     if args.config:
         apply_config_override(validate_config_file(args.config))
+
+    if getattr(args, "command", None) == "doctor":
+        sys.exit(run_doctor())
 
     check_docker_installed()
     pull_docker_image()
