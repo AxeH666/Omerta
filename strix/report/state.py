@@ -10,6 +10,7 @@ from uuid import uuid4
 
 from agents.usage import Usage
 
+from strix.core.inputs import DEFAULT_MAX_TURNS
 from strix.core.paths import run_dir_for
 from strix.report.sarif import write_sarif
 from strix.report.usage import LLMUsageLedger
@@ -114,6 +115,13 @@ class ReportState:
         self.vulnerability_reports: list[dict[str, Any]] = []
         self.final_scan_result: str | None = None
 
+        # Live model-turn counter (incremented once per model response by
+        # ReportUsageHooks.on_llm_end) plus the turn budget it runs against.
+        # The budget default mirrors DEFAULT_MAX_TURNS, which otherwise stops
+        # at the runner/execution layer and is not exposed to the UI.
+        self.model_turns: int = 0
+        self.max_turns: int = DEFAULT_MAX_TURNS
+
         self.scan_results: dict[str, Any] | None = None
         self.scan_config: dict[str, Any] | None = None
         self._llm_usage = LLMUsageLedger()
@@ -170,6 +178,11 @@ class ReportState:
                 self.start_time = data["start_time"]
             if isinstance(data.get("end_time"), str):
                 self.end_time = data["end_time"]
+            if isinstance(data.get("model_turns"), int):
+                # Restore the cumulative turn counter so a resumed scan keeps
+                # counting from where it left off, consistent with the
+                # hydrated start_time and llm_usage (instead of resetting to 0).
+                self.model_turns = data["model_turns"]
             scan_results = data.get("scan_results")
             if isinstance(scan_results, dict):
                 self.scan_results = scan_results
@@ -364,6 +377,7 @@ class ReportState:
             self.run_record["end_time"] = self.end_time
             self.run_record["status"] = status
 
+        self.run_record["model_turns"] = self.model_turns
         self._sync_llm_usage_record()
         self._save_artifacts()
 

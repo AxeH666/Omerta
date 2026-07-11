@@ -5,6 +5,7 @@ import signal
 import sys
 import threading
 import time
+from datetime import UTC, datetime
 from typing import Any
 
 from rich.console import Console
@@ -19,7 +20,10 @@ from strix.runtime import session_manager
 
 from .utils import (
     build_live_stats_text,
+    format_elapsed,
+    format_model_turns,
     format_vulnerability_report,
+    scan_phase_label,
 )
 
 
@@ -142,6 +146,24 @@ async def run_cli(args: Any) -> None:  # noqa: PLR0915
         stats_text = build_live_stats_text(report_state)
         if stats_text:
             status_text.append(stats_text)
+
+        # Honest live feedback (additive) -- all values from the real
+        # report_state. Agent counts are intentionally omitted here: the CLI
+        # path does not have the live AgentCoordinator in scope, so a truthful
+        # count is not reachable without new plumbing.
+        status_text.append("\n")
+        status_text.append("Phase ", style="dim")
+        status_text.append(scan_phase_label(report_state), style="white")
+        status_text.append("\n")
+        status_text.append("Elapsed ", style="dim")
+        status_text.append(
+            format_elapsed(report_state.start_time, datetime.now(UTC)), style="white"
+        )
+        status_text.append("\n")
+        status_text.append(
+            format_model_turns(report_state.model_turns),
+            style="white",
+        )
 
         return Panel(
             status_text,

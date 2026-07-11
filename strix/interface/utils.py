@@ -9,6 +9,7 @@ import subprocess
 import sys
 import tempfile
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
@@ -57,6 +58,96 @@ def format_token_count(count: float | None) -> str:
     if value >= 1_000:
         return f"{value / 1_000:.1f}K"
     return str(value)
+
+
+# Canonical order for lifecycle statuses (strix/core/agents.py:21 Status enum).
+_AGENT_STATUS_ORDER = ("running", "waiting", "completed", "stopped", "crashed", "failed")
+
+
+def format_elapsed(start_time_iso: str, now: datetime) -> str:
+    """Human elapsed time between an ISO-8601 start and ``now``.
+
+    ``now`` is injected (not read from the clock) so callers/tests are
+    deterministic. Anchored to ``start_time`` -- which resume restores from
+    run.json (state.py:170) -- so a resumed scan shows total elapsed since
+    the real start, never a negative or reset value. Style: "1h 1m 5s",
+    "1m 23s", "0s".
+    """
+    start = datetime.fromisoformat(start_time_iso)
+    total = int(max(0.0, (now - start).total_seconds()))
+    hours, remainder = divmod(total, 3600)
+    minutes, seconds = divmod(remainder, 60)
+
+    parts = []
+    if hours:
+        parts.append(f"{hours}h")
+    if hours or minutes:
+        parts.append(f"{minutes}m")
+    parts.append(f"{seconds}s")
+    return " ".join(parts)
+
+
+def format_agent_counts(statuses: dict[str, str]) -> str:
+    """Tally live agent lifecycle statuses, e.g. '2 running · 1 completed'.
+
+    Counts only the real ``Status`` values that are present -- no invented
+    categories, no '0 completed' noise. ``statuses`` is the coordinator's
+    live status map (strix/core/agents.py:37).
+    """
+    counts: dict[str, int] = {}
+    for status in statuses.values():
+        counts[status] = counts.get(status, 0) + 1
+
+    ordered = [s for s in _AGENT_STATUS_ORDER if counts.get(s)]
+    # Preserve any status not in the canonical order rather than drop it.
+    ordered += [s for s in counts if s not in _AGENT_STATUS_ORDER]
+    return " · ".join(f"{counts[s]} {s}" for s in ordered)
+
+
+def format_model_turns(turn_count: int) -> str:
+    """Render the cumulative model-turn counter as an honest plain count.
+
+    ``model_turns`` is a scan-wide tally incremented once per model response
+    across every agent (``ReportUsageHooks.on_llm_end``). It is shown with NO
+    denominator on purpose: the SDK's ``max_turns`` is a per-run ceiling
+    applied to each individual ``Runner.run`` invocation, not a scan-wide
+    budget. Dividing the global count by that per-run ceiling was
+    apples-to-oranges and could render "612 / 500" while the scan ran on
+    normally. A count is a count -- no percentage, no "complete", no fake
+    budget.
+    """
+    return f"Model turns {turn_count}"
+
+
+def agent_statuses_from_view(agents: dict[str, dict[str, Any]]) -> dict[str, str]:
+    """Extract an ``{agent_id: status}`` map from the TUI's synced agent view.
+
+    The TUI must read lifecycle state from ``live_view.agents`` -- a copy owned
+    and mutated only on the UI thread, refreshed via the coordinator's
+    thread-safe ``graph_snapshot`` -- NOT from the live ``coordinator.statuses``
+    dict, which the scan's asyncio loop mutates on another thread. Iterating
+    that live dict from the UI timer thread raced with "dictionary changed size
+    during iteration". This helper adapts the synced view into the shape
+    :func:`format_agent_counts` expects.
+    """
+    return {
+        str(agent_id): str(data.get("status", "running"))
+        for agent_id, data in agents.items()
+        if isinstance(data, dict)
+    }
+
+
+def scan_phase_label(report_state: Any) -> str:
+    """The only truthful phase flip: 'scanning' -> 'finalizing'.
+
+    Keyed off ``final_scan_result``, which ``finish_scan`` populates
+    (state.py:324). Incremental vuln reports filed mid-scan do NOT flip it
+    -- reporting happens continuously, so it is not a finalization signal.
+    No recon/exploit labels: the code cannot prove those truthfully.
+    """
+    if getattr(report_state, "final_scan_result", None) is not None:
+        return "finalizing"
+    return "scanning"
 
 
 def format_vulnerability_report(report: dict[str, Any]) -> Text:  # noqa: PLR0915
