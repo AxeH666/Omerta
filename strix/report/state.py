@@ -178,6 +178,11 @@ class ReportState:
                 self.start_time = data["start_time"]
             if isinstance(data.get("end_time"), str):
                 self.end_time = data["end_time"]
+            if isinstance(data.get("model_turns"), int):
+                # Restore the cumulative turn counter so a resumed scan keeps
+                # counting from where it left off, consistent with the
+                # hydrated start_time and llm_usage (instead of resetting to 0).
+                self.model_turns = data["model_turns"]
             scan_results = data.get("scan_results")
             if isinstance(scan_results, dict):
                 self.scan_results = scan_results
@@ -372,6 +377,7 @@ class ReportState:
             self.run_record["end_time"] = self.end_time
             self.run_record["status"] = status
 
+        self.run_record["model_turns"] = self.model_turns
         self._sync_llm_usage_record()
         self._save_artifacts()
 

@@ -104,14 +104,37 @@ def format_agent_counts(statuses: dict[str, str]) -> str:
     return " · ".join(f"{counts[s]} {s}" for s in ordered)
 
 
-def format_turn_budget(turn_count: int, max_turns: int) -> str:
-    """Render the live model-turn counter against its budget.
+def format_model_turns(turn_count: int) -> str:
+    """Render the cumulative model-turn counter as an honest plain count.
 
-    Honest by construction: ``max_turns`` is framed as a BUDGET (a ceiling),
-    never a completion denominator -- there is no percentage and no
-    "complete", because reaching the ceiling is not the goal.
+    ``model_turns`` is a scan-wide tally incremented once per model response
+    across every agent (``ReportUsageHooks.on_llm_end``). It is shown with NO
+    denominator on purpose: the SDK's ``max_turns`` is a per-run ceiling
+    applied to each individual ``Runner.run`` invocation, not a scan-wide
+    budget. Dividing the global count by that per-run ceiling was
+    apples-to-oranges and could render "612 / 500" while the scan ran on
+    normally. A count is a count -- no percentage, no "complete", no fake
+    budget.
     """
-    return f"Model turns {turn_count} / {max_turns} (budget)"
+    return f"Model turns {turn_count}"
+
+
+def agent_statuses_from_view(agents: dict[str, dict[str, Any]]) -> dict[str, str]:
+    """Extract an ``{agent_id: status}`` map from the TUI's synced agent view.
+
+    The TUI must read lifecycle state from ``live_view.agents`` -- a copy owned
+    and mutated only on the UI thread, refreshed via the coordinator's
+    thread-safe ``graph_snapshot`` -- NOT from the live ``coordinator.statuses``
+    dict, which the scan's asyncio loop mutates on another thread. Iterating
+    that live dict from the UI timer thread raced with "dictionary changed size
+    during iteration". This helper adapts the synced view into the shape
+    :func:`format_agent_counts` expects.
+    """
+    return {
+        str(agent_id): str(data.get("status", "running"))
+        for agent_id, data in agents.items()
+        if isinstance(data, dict)
+    }
 
 
 def scan_phase_label(report_state: Any) -> str:

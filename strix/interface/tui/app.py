@@ -40,10 +40,11 @@ from strix.interface.tui.renderers import render_tool_widget
 from strix.interface.tui.renderers.agent_message_renderer import AgentMessageRenderer
 from strix.interface.tui.renderers.user_message_renderer import UserMessageRenderer
 from strix.interface.utils import (
+    agent_statuses_from_view,
     build_tui_stats_text,
     format_agent_counts,
     format_elapsed,
-    format_turn_budget,
+    format_model_turns,
     scan_phase_label,
 )
 from strix.report.state import ReportState, set_global_report_state
@@ -1223,8 +1224,11 @@ class StrixTUIApp(App):  # type: ignore[misc]
             stats_content.append(stats_text)
 
         # Honest live feedback (additive). Phase/elapsed/turns from the real
-        # report_state; agent counts from the live coordinator status map
-        # (self.coordinator is the same instance the scan drives).
+        # report_state; agent counts from the UI-thread-owned live_view.agents
+        # projection (refreshed via the thread-safe graph_snapshot in
+        # _sync_agent_graph), NOT the live coordinator.statuses dict -- that one
+        # is mutated by the scan's asyncio loop on another thread, so iterating
+        # it here raced ("dictionary changed size during iteration").
         report_state = self.report_state
         if report_state:
             stats_content.append("\n")
@@ -1233,13 +1237,13 @@ class StrixTUIApp(App):  # type: ignore[misc]
             stats_content.append(
                 format_elapsed(report_state.start_time, datetime.now(UTC)), style="white"
             )
-            agent_counts = format_agent_counts(self.coordinator.statuses)
+            agent_counts = format_agent_counts(agent_statuses_from_view(self.live_view.agents))
             if agent_counts:
                 stats_content.append("\n")
                 stats_content.append(agent_counts, style="white")
             stats_content.append("\n")
             stats_content.append(
-                format_turn_budget(report_state.model_turns, report_state.max_turns),
+                format_model_turns(report_state.model_turns),
                 style="white",
             )
 

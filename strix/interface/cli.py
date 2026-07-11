@@ -21,7 +21,7 @@ from strix.runtime import session_manager
 from .utils import (
     build_live_stats_text,
     format_elapsed,
-    format_turn_budget,
+    format_model_turns,
     format_vulnerability_report,
     scan_phase_label,
 )
@@ -161,7 +161,7 @@ async def run_cli(args: Any) -> None:  # noqa: PLR0915
         )
         status_text.append("\n")
         status_text.append(
-            format_turn_budget(report_state.model_turns, report_state.max_turns),
+            format_model_turns(report_state.model_turns),
             style="white",
         )
 

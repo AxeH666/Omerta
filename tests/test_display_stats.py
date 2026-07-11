@@ -22,6 +22,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -129,49 +130,102 @@ def test_agent_counts_only_real_statuses_appear() -> None:
 
 
 # ---------------------------------------------------------------------------
-# C. Model-turn counter renders, labeled honestly (not "% complete")
+# C. Model-turn counter renders, labeled honestly (plain count, no fake budget)
 # ---------------------------------------------------------------------------
 
 
-def test_turn_budget_shows_count_and_budget() -> None:
-    """Renders the live count and the budget ceiling, labeled as turns."""
-    from strix.interface.utils import format_turn_budget
+def test_model_turns_shows_plain_count() -> None:
+    """Renders the live cumulative count, labeled as turns."""
+    from strix.interface.utils import format_model_turns
 
-    rendered = format_turn_budget(47, 500)
+    rendered = format_model_turns(47)
     assert "47" in rendered
-    assert "500" in rendered
     assert "turn" in rendered.lower()
 
 
-def test_turn_budget_is_honest_not_a_percentage() -> None:
-    """The honesty guard: never dress the turn counter up as % complete.
+def test_model_turns_has_no_fake_budget_denominator() -> None:
+    """The honesty guard: model_turns is a scan-wide count, not a ratio.
 
-    This test fails if anyone later renders a completion percentage or
-    calls the budget 'complete' -- the ceiling is a budget, not a finish.
+    ``max_turns`` is the SDK's PER-RUN ceiling, not a scan-wide budget, so a
+    global count must never be divided by it -- that produced misleading
+    output like "612 / 500". No denominator, no percentage, no "complete".
     """
-    from strix.interface.utils import format_turn_budget
+    from strix.interface.utils import format_model_turns
 
-    rendered = format_turn_budget(47, 500).lower()
+    # A count far above the per-run ceiling renders honestly as just a count.
+    rendered = format_model_turns(612).lower()
+    assert "612" in rendered
+    assert "500" not in rendered
+    assert "/" not in rendered
+    assert "budget" not in rendered
     assert "%" not in rendered
     assert "complete" not in rendered
 
 
-def test_turn_budget_zero_and_report_state_fields() -> None:
+def test_model_turns_zero_and_report_state_fields() -> None:
     """Fresh ReportState exposes the plumbed fields; zero turns is safe.
 
-    ``model_turns`` (incremented per model turn) defaults to 0 and
-    ``max_turns`` is plumbed onto the state (default DEFAULT_MAX_TURNS=500,
-    which today stops at the runner/execution layer).
+    ``model_turns`` (incremented per model turn) defaults to 0; ``max_turns``
+    remains plumbed on the state as the per-run ceiling, but is no longer
+    presented to the user as a scan-wide budget.
     """
-    from strix.interface.utils import format_turn_budget
+    from strix.interface.utils import format_model_turns
 
     state = ReportState(run_name="t")
     assert state.model_turns == 0
     assert state.max_turns == DEFAULT_MAX_TURNS
 
-    rendered = format_turn_budget(state.model_turns, state.max_turns)
+    rendered = format_model_turns(state.model_turns)
     assert "0" in rendered
-    assert "500" in rendered
+
+
+def test_model_turns_persisted_and_restored_on_resume(
+    tmp_path: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The counter survives resume: it is written to run.json and restored.
+
+    Regression guard for the resume-resets-to-zero bug -- without persistence,
+    a resumed scan showed model_turns=0 while start_time/llm_usage were
+    hydrated, misrepresenting progress. ``get_run_dir`` resolves under the CWD,
+    so we chdir into an isolated tmp_path.
+    """
+    monkeypatch.chdir(tmp_path)
+
+    state = ReportState(run_name="resume-me")
+    state.model_turns = 7
+    state.save_run_data()
+
+    resumed = ReportState(run_name="resume-me")
+    assert resumed.model_turns == 0  # fresh instance starts at zero
+    resumed.hydrate_from_run_dir()
+    assert resumed.model_turns == 7  # ...then resume restores the real count
+
+
+def test_agent_statuses_from_view_extracts_status_map() -> None:
+    """The TUI counts agents from its synced view, not the live coordinator.
+
+    ``agent_statuses_from_view`` adapts ``live_view.agents`` (a UI-thread copy)
+    into the ``{id: status}`` shape ``format_agent_counts`` expects, so the
+    stats refresh never iterates the coordinator's live dict across threads.
+    """
+    from strix.interface.utils import agent_statuses_from_view, format_agent_counts
+
+    agents = {
+        "root": {"status": "running", "name": "strix"},
+        "recon": {"status": "running", "name": "recon"},
+        "web": {"status": "completed", "name": "web"},
+    }
+    statuses = agent_statuses_from_view(agents)
+    assert statuses == {"root": "running", "recon": "running", "web": "completed"}
+    assert format_agent_counts(statuses) == "2 running · 1 completed"
+
+
+def test_agent_statuses_from_view_defaults_and_skips_malformed() -> None:
+    """Missing status defaults to 'running'; non-dict entries are skipped."""
+    from strix.interface.utils import agent_statuses_from_view
+
+    result = agent_statuses_from_view({"a": {}, "b": "not-a-dict"})  # type: ignore[dict-item]
+    assert result == {"a": "running"}
 
 
 async def test_on_llm_end_increments_model_turns() -> None:
