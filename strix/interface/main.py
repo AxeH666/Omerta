@@ -29,6 +29,7 @@ from strix.config.models import (
     is_known_openai_bare_model,
 )
 from strix.core.paths import run_dir_for, runtime_state_dir
+from strix.interface import theme
 from strix.interface.cli import run_cli
 from strix.interface.doctor import (
     ProbeResult,
@@ -107,7 +108,7 @@ def check_docker_installed() -> None:
 
         panel = Panel(
             error_text,
-            title="[bold white]STRIX",
+            title=theme.PANEL_TITLE,
             title_align="left",
             border_style="red",
             padding=(1, 2),
@@ -151,7 +152,7 @@ async def warm_up_llm() -> None:
             console.print(
                 Panel(
                     warn_text,
-                    title="[bold white]STRIX",
+                    title=theme.PANEL_TITLE,
                     title_align="left",
                     border_style="yellow",
                     padding=(1, 2),
@@ -191,7 +192,7 @@ async def warm_up_llm() -> None:
 
         panel = Panel(
             error_text,
-            title="[bold white]STRIX",
+            title=theme.PANEL_TITLE,
             title_align="left",
             border_style="red",
             padding=(1, 2),
@@ -226,7 +227,7 @@ def _positive_budget(value: str) -> float:
 
 def parse_arguments(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Strix Multi-Agent Cybersecurity Penetration Testing Tool",
+        description=theme.DESCRIPTION,
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -604,16 +605,16 @@ def display_completion_message(args: argparse.Namespace, results_path: Path) -> 
         resume_text.append("\n")
         resume_text.append("Resume", style="dim")
         resume_text.append("  ")
-        resume_text.append(f"strix --resume {args.run_name}", style="#22c55e")
+        resume_text.append(f"strix --resume {args.run_name}", style=theme.NEON_CYAN)
         panel_parts.extend(["\n", resume_text])
 
     panel_content = Text.assemble(*panel_parts)
 
-    border_style = "#22c55e" if scan_completed else "#eab308"
+    border_style = theme.NEON_CYAN if scan_completed else theme.AMBER
 
     panel = Panel(
         panel_content,
-        title="[bold white]STRIX",
+        title=theme.PANEL_TITLE,
         title_align="left",
         border_style=border_style,
         padding=(1, 2),
@@ -623,9 +624,9 @@ def display_completion_message(args: argparse.Namespace, results_path: Path) -> 
     console.print(panel)
     console.print()
     console.print(
-        "[#60a5fa]strix.ai[/]  [dim]·[/]  "
-        "[#60a5fa]docs.strix.ai[/]  [dim]·[/]  "
-        "[#60a5fa]discord.gg/strix-ai[/]"
+        f"[bold {theme.BLOOD}]{theme.BRAND}[/]  [dim]·[/]  "
+        f"[dim]a fork of Strix (Apache-2.0)[/]  [dim]·[/]  "
+        f"[{theme.NEON_CYAN}]docs.strix.ai[/]"
     )
     console.print()
 
@@ -665,7 +666,7 @@ def pull_docker_image() -> None:
 
             panel = Panel(
                 error_text,
-                title="[bold white]STRIX",
+                title=theme.PANEL_TITLE,
                 title_align="left",
                 border_style="red",
                 padding=(1, 2),
@@ -811,7 +812,7 @@ def main() -> None:
 
             panel = Panel(
                 error_text,
-                title="[bold white]STRIX",
+                title=theme.PANEL_TITLE,
                 title_align="left",
                 border_style="red",
                 padding=(1, 2),
