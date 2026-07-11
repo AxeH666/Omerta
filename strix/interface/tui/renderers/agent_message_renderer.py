@@ -13,10 +13,10 @@ _BLANK_LINE_RUNS = re.compile(r"\n\s*\n")
 
 _HEADER_STYLES = [
     ("###### ", 7, "bold #4ade80"),
-    ("##### ", 6, "bold #22c55e"),
+    ("##### ", 6, "bold #22d3ee"),
     ("#### ", 5, "bold #16a34a"),
     ("### ", 4, "bold #15803d"),
-    ("## ", 3, "bold #22c55e"),
+    ("## ", 3, "bold #22d3ee"),
     ("# ", 2, "bold #4ade80"),
 ]
 
@@ -97,16 +97,16 @@ def _apply_markdown_styles(text: str) -> Text:  # noqa: PLR0912
         if header:
             result.append(header[0], style=header[1])
         elif line.startswith("> "):
-            result.append("┃ ", style="#22c55e")
+            result.append("┃ ", style="#22d3ee")
             result.append_text(_process_inline_formatting(line[2:]))
         elif line.startswith(("- ", "* ")):
-            result.append("• ", style="#22c55e")
+            result.append("• ", style="#22d3ee")
             result.append_text(_process_inline_formatting(line[2:]))
         elif len(line) > 2 and line[0].isdigit() and line[1:3] in (". ", ") "):
-            result.append(line[0] + ". ", style="#22c55e")
+            result.append(line[0] + ". ", style="#22d3ee")
             result.append_text(_process_inline_formatting(line[2:]))
         elif line.strip() in ("---", "***", "___"):
-            result.append("─" * 40, style="#22c55e")
+            result.append("─" * 40, style="#22d3ee")
         else:
             result.append_text(_process_inline_formatting(line))
 
@@ -141,7 +141,7 @@ def _process_inline_formatting(line: str) -> Text:
         if line[i] == "`":
             end = line.find("`", i + 1)
             if end != -1:
-                result.append(line[i + 1 : end], style="bold #22c55e on #0a0a0a")
+                result.append(line[i + 1 : end], style="bold #22d3ee on #0a0a0a")
                 i = end + 1
                 continue
 

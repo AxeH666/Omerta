@@ -18,6 +18,7 @@ from strix.core.runner import run_strix_scan
 from strix.report.state import ReportState, set_global_report_state
 from strix.runtime import session_manager
 
+from . import theme
 from .utils import (
     build_agent_activity_text,
     build_live_stats_text,
@@ -43,31 +44,40 @@ def _resolve_sandbox_image() -> str:
 async def run_cli(args: Any) -> None:  # noqa: PLR0915
     console = Console()
 
+    wordmark_text = Text(theme.WORDMARK, style=f"bold {theme.BLOOD}")
+
+    tagline_text = Text()
+    tagline_text.append(theme.TAGLINE, style=f"italic {theme.NEON_CYAN}")
+
     start_text = Text()
-    start_text.append("Penetration test initiated", style="bold #22c55e")
+    start_text.append(theme.CONTRACT_OPENED, style=f"bold {theme.BONE}")
 
     target_text = Text()
-    target_text.append("Target", style="dim")
+    target_text.append("Target", style=f"dim {theme.ASH}")
     target_text.append("  ")
     if len(args.targets_info) == 1:
-        target_text.append(args.targets_info[0]["original"], style="bold white")
+        target_text.append(args.targets_info[0]["original"], style=f"bold {theme.BONE}")
     else:
-        target_text.append(f"{len(args.targets_info)} targets", style="bold white")
+        target_text.append(f"{len(args.targets_info)} targets", style=f"bold {theme.BONE}")
         for target_info in args.targets_info:
             target_text.append("\n        ")
-            target_text.append(target_info["original"], style="white")
+            target_text.append(target_info["original"], style=theme.BONE)
 
     results_text = Text()
-    results_text.append("Output", style="dim")
+    results_text.append("Output", style=f"dim {theme.ASH}")
     results_text.append("  ")
-    results_text.append(f"strix_runs/{args.run_name}", style="#60a5fa")
+    results_text.append(f"strix_runs/{args.run_name}", style=theme.NEON_CYAN)
 
     note_text = Text()
     note_text.append("\n\n", style="dim")
-    note_text.append("Vulnerabilities will be displayed in real-time.", style="dim")
+    note_text.append(theme.STARTUP_NOTE, style=f"dim {theme.ASH}")
 
     startup_panel = Panel(
         Text.assemble(
+            wordmark_text,
+            "\n",
+            tagline_text,
+            "\n\n",
             start_text,
             "\n\n",
             target_text,
@@ -75,10 +85,7 @@ async def run_cli(args: Any) -> None:  # noqa: PLR0915
             results_text,
             note_text,
         ),
-        title="[bold white]STRIX",
-        title_align="left",
-        border_style="#22c55e",
-        padding=(1, 2),
+        **theme.panel_kwargs(),
     )
 
     console.print("\n")
@@ -113,9 +120,9 @@ async def run_cli(args: Any) -> None:  # noqa: PLR0915
 
         vuln_panel = Panel(
             vuln_text,
-            title=f"[bold red]{report_id.upper()}",
+            title=f"[bold {theme.DANGER}]{report_id.upper()}",
             title_align="left",
-            border_style="red",
+            border_style=theme.DANGER,
             padding=(1, 2),
         )
 
@@ -141,7 +148,7 @@ async def run_cli(args: Any) -> None:  # noqa: PLR0915
 
     def create_live_status() -> Panel:
         status_text = Text()
-        status_text.append("Penetration test in progress", style="bold #22c55e")
+        status_text.append(theme.JOB_RUNNING, style=f"bold {theme.NEON_CYAN}")
         status_text.append("\n\n")
 
         stats_text = build_live_stats_text(report_state)
@@ -159,25 +166,22 @@ async def run_cli(args: Any) -> None:  # noqa: PLR0915
             status_text.append(activity_text)
 
         status_text.append("\n")
-        status_text.append("Phase ", style="dim")
-        status_text.append(scan_phase_label(report_state), style="white")
+        status_text.append("Phase ", style=f"dim {theme.ASH}")
+        status_text.append(scan_phase_label(report_state), style=theme.BONE)
         status_text.append("\n")
-        status_text.append("Elapsed ", style="dim")
+        status_text.append("Elapsed ", style=f"dim {theme.ASH}")
         status_text.append(
-            format_elapsed(report_state.start_time, datetime.now(UTC)), style="white"
+            format_elapsed(report_state.start_time, datetime.now(UTC)), style=theme.BONE
         )
         status_text.append("\n")
         status_text.append(
             format_model_turns(report_state.model_turns),
-            style="white",
+            style=theme.BONE,
         )
 
         return Panel(
             status_text,
-            title="[bold white]STRIX",
-            title_align="left",
-            border_style="#22c55e",
-            padding=(1, 2),
+            **theme.panel_kwargs(accent=theme.NEON_CYAN),
         )
 
     try:
@@ -221,14 +225,14 @@ async def run_cli(args: Any) -> None:  # noqa: PLR0915
                     await session_manager.cleanup(args.run_name)
 
     except Exception as e:
-        console.print(f"[bold red]Error during penetration test:[/] {e}")
+        console.print(f"[bold {theme.DANGER}]The job went sideways:[/] {e}")
         raise
 
     if report_state.final_scan_result:
         console.print()
 
         final_report_text = Text()
-        final_report_text.append("Penetration test summary", style="bold #60a5fa")
+        final_report_text.append(theme.FINAL_WORD, style=f"bold {theme.GOLD}")
 
         final_report_panel = Panel(
             Text.assemble(
@@ -236,10 +240,7 @@ async def run_cli(args: Any) -> None:  # noqa: PLR0915
                 "\n\n",
                 report_state.final_scan_result,
             ),
-            title="[bold white]STRIX",
-            title_align="left",
-            border_style="#60a5fa",
-            padding=(1, 2),
+            **theme.panel_kwargs(accent=theme.GOLD),
         )
 
         console.print(final_report_panel)

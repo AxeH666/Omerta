@@ -28,6 +28,7 @@ from rich.panel import Panel
 from rich.text import Text
 
 from strix.config.models import is_known_openai_bare_model
+from strix.interface import theme
 
 
 if TYPE_CHECKING:
@@ -240,7 +241,7 @@ def render_doctor_report(results: list[ProbeResult], console: Console) -> None:
     user gets one complete picture of what to fix.
     """
     console.print()
-    console.print("STRIX DOCTOR", style="bold")
+    console.print(f"{theme.BRAND} DOCTOR", style=f"bold {theme.BLOOD}")
     console.print()
     for result in results:
         marker = "✅" if result.ok else "❌"
@@ -282,9 +283,9 @@ def render_failure_panel(result: ProbeResult, console: Console) -> None:
 
     panel = Panel(
         text,
-        title="[bold white]STRIX",
+        title=theme.PANEL_TITLE,
         title_align="left",
-        border_style="red",
+        border_style=theme.DANGER,
         padding=(1, 2),
     )
     console.print("\n")

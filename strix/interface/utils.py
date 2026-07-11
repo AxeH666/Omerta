@@ -24,8 +24,22 @@ from rich.text import Text
 
 from strix.config import load_settings
 
+from . import theme
+
 
 logger = logging.getLogger(__name__)
+
+
+def _agent_status_color(status: str) -> str:
+    """Palette color for a live agent lifecycle status (presentation only)."""
+    return {
+        "running": theme.NEON_CYAN,
+        "waiting": theme.AMBER,
+        "completed": theme.DONE,
+        "stopped": theme.ASH,
+        "crashed": theme.DANGER,
+        "failed": theme.DANGER,
+    }.get(status, theme.ASH)
 
 
 def get_severity_color(severity: str) -> str:
@@ -179,14 +193,14 @@ def build_agent_activity_text(run_dir: Any) -> Text:
 
     names = _agent_names_from_run_dir(run_dir)
 
-    text.append("Agents ", style="dim")
-    text.append(format_agent_counts(statuses), style="white")
+    text.append("Agents ", style=f"dim {theme.ASH}")
+    text.append(format_agent_counts(statuses), style=theme.BONE)
 
     for agent_id, status in statuses.items():
         text.append("\n  ")
-        text.append(names.get(agent_id, agent_id), style="white")
+        text.append(names.get(agent_id, agent_id), style=theme.BONE)
         text.append("  ")
-        text.append(status, style="dim")
+        text.append(status, style=_agent_status_color(status))
 
     return text
 
@@ -395,7 +409,7 @@ def _build_vulnerability_stats(stats_text: Text, report_state: Any) -> None:
             if severity in severity_counts:
                 severity_counts[severity] += 1
 
-        stats_text.append("Vulnerabilities  ", style="bold red")
+        stats_text.append("Vulnerabilities  ", style=f"bold {theme.DANGER}")
 
         severity_parts = []
         for severity in ["critical", "high", "medium", "low", "info"]:
@@ -417,9 +431,11 @@ def _build_vulnerability_stats(stats_text: Text, report_state: Any) -> None:
         stats_text.append(")", style="dim white")
         stats_text.append("\n")
     else:
-        stats_text.append("Vulnerabilities  ", style="bold #22c55e")
-        stats_text.append("0", style="bold white")
-        stats_text.append(" (No exploitable vulnerabilities detected)", style="dim green")
+        stats_text.append("Vulnerabilities  ", style=f"bold {theme.NEON_CYAN}")
+        stats_text.append("0", style=f"bold {theme.BONE}")
+        stats_text.append(
+            " (No exploitable vulnerabilities detected)", style=f"dim {theme.NEON_CYAN_DIM}"
+        )
         stats_text.append("\n")
 
 
@@ -1089,7 +1105,7 @@ def _resolve_repo_diff_scope(
 
     if _is_repo_shallow(repo_path):
         raise ValueError(
-            "Strix requires full git history for diff-scope. Please set fetch-depth: 0 "
+            "Omerta requires full git history for diff-scope. Please set fetch-depth: 0 "
             "in your CI config."
         )
 
@@ -1624,9 +1640,9 @@ def clone_repository(repo_url: str, run_name: str, dest_name: str | None = None)
 
         panel = Panel(
             error_text,
-            title="[bold white]STRIX",
+            title=theme.PANEL_TITLE,
             title_align="left",
-            border_style="red",
+            border_style=theme.DANGER,
             padding=(1, 2),
         )
         console.print("\n")
@@ -1642,9 +1658,9 @@ def clone_repository(repo_url: str, run_name: str, dest_name: str | None = None)
 
         panel = Panel(
             error_text,
-            title="[bold white]STRIX",
+            title=theme.PANEL_TITLE,
             title_align="left",
-            border_style="red",
+            border_style=theme.DANGER,
             padding=(1, 2),
         )
         console.print("\n")
@@ -1669,9 +1685,9 @@ def check_docker_connection() -> Any:
 
         panel = Panel(
             error_text,
-            title="[bold white]STRIX",
+            title=theme.PANEL_TITLE,
             title_align="left",
-            border_style="red",
+            border_style=theme.DANGER,
             padding=(1, 2),
         )
         console.print("\n", panel, "\n")

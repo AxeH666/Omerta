@@ -34,8 +34,8 @@ FILE_STYLE = "bold #60a5fa"
 LINE_STYLE = "#facc15"
 LABEL_STYLE = "italic #a1a1aa"
 CODE_STYLE = "#e2e8f0"
-BEFORE_STYLE = "#ef4444"
-AFTER_STYLE = "#22c55e"
+BEFORE_STYLE = "#ef4444"  # removed / fix_before — red (diff convention)
+AFTER_STYLE = "#65a30d"  # added / fix_after — green (diff convention)
 
 
 @register_tool_renderer

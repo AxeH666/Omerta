@@ -51,8 +51,8 @@ preflight command and friendly, actionable env/setup probe messages.
 
 ---
 
-## PR #3 — goal-3: live agent activity in the CLI  🔄 IN PROGRESS
-Branch: `goal-3-cli-activity` → `main`
+## PR #3 — goal-3: live agent activity in the CLI  ✅ MERGED
+Branch: `goal-3-cli-activity` → `main` (merge commit `c43f0d6`)
 
 Rebased onto `main` (post-PR#2). **Conflict resolved** in `utils.py`: goal-1's
 bugbot fix renamed `format_turn_budget` → `format_model_turns`, which collided
@@ -64,4 +64,32 @@ and updated goal-3's regression test to the renamed helper. Full suite green
 
 Adds honest live agent activity to the non-interactive CLI (lifecycle counts +
 named roster) by disk-polling the coordinator's `{run_dir}/.state/agents.json`
-snapshot — no change to the scan call signature. Opening PR, awaiting bugbot.
+snapshot — no change to the scan call signature.
+
+**Bugbot: ✅ no new issues.** Merged.
+
+---
+
+## PR #4 — goal-4: Omerta rebrand + mafia-noir/cyberpunk UI  🔄 IN PROGRESS
+Branch: `goal-4-omerta-rebrand` → `main`
+
+Rebased via `git rebase --onto main 406f66f` (goal-4's 8 commits only, skipping
+the already-merged goal-3 commits). One conflict, in `cli.py`: goal-4 rethemed
+the same turn-counter line goal-1's bugbot fix renamed. Resolved to
+`format_model_turns(...)` (the fixed helper) with goal-4's `theme.BONE` styling.
+The doctor and app.py merges cleanly combined both worlds — the goal-2 warnings
+fix + goal-4 rebrand in `render_failure_panel`, and goal-1's thread-safe agent
+counts + `format_model_turns` under goal-4's new theme. Full suite green
+(177 passed).
+
+Scope (display-only rename, confirmed with the user): rebrands everything a user
+reads to OMERTA (banners, panels, CLI help, doctor, TUI splash) with a
+noir-cyberpunk palette (blood-red / neon-cyan / bone on near-black), an ASCII
+wordmark, and an understated voice — while keeping `STRIX_*` env, `~/.strix`,
+`strix_runs/`, the `strix-agent` package, module paths, SARIF tool identity, and
+the Apache LICENSE/attribution untouched. Adds an `omerta` CLI entrypoint (with
+a `strix` alias). Opening PR, awaiting bugbot.
+
+Note: the pyproject `[project.scripts]` change makes `uv run` want to rebuild
+offline (no cached hatchling) — run tests with `.venv/bin/python -m pytest`; a
+networked `uv sync` resolves it and also generates the `omerta` launcher.

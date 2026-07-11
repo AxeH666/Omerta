@@ -94,8 +94,8 @@ class AgentFinishRenderer(BaseToolRenderer):
         text = Text()
 
         if success:
-            text.append("◆ ", style="#22c55e")
-            text.append("Agent completed", style="bold #22c55e")
+            text.append("◆ ", style="#22d3ee")
+            text.append("Agent completed", style="bold #22d3ee")
         else:
             text.append("◆ ", style="#ef4444")
             text.append("Agent failed", style="bold #ef4444")
