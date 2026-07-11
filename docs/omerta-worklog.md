@@ -36,8 +36,8 @@ foundational recon docs and the guardrails hook.
 
 ---
 
-## PR #2 — goal-2: doctor command + friendly messages  🔄 IN PROGRESS
-Branch: `goal-2-doctor` → `main`
+## PR #2 — goal-2: doctor command + friendly messages  ✅ MERGED
+Branch: `goal-2-doctor` → `main` (merge commit `f65c720`)
 
 Rebased cleanly onto `main` (post-PR#1). Full suite green. Adds the `doctor`
 preflight command and friendly, actionable env/setup probe messages.
@@ -48,3 +48,20 @@ preflight command and friendly, actionable env/setup probe messages.
    (e.g. `STRIX_LLM` unset) dropped optional-var notes that `strix doctor`
    still shows. → Append warnings to the panel (⚠ yellow, matching the doctor
    report); added `test_13b` asserting they surface. 164 passed.
+
+---
+
+## PR #3 — goal-3: live agent activity in the CLI  🔄 IN PROGRESS
+Branch: `goal-3-cli-activity` → `main`
+
+Rebased onto `main` (post-PR#2). **Conflict resolved** in `utils.py`: goal-1's
+bugbot fix renamed `format_turn_budget` → `format_model_turns`, which collided
+with goal-3's new functions inserted at the same spot. Kept the bugbot-fixed
+`format_model_turns`, added goal-3's `agent_activity_from_run_dir` /
+`build_agent_activity_text`, dropped the resurrected old `format_turn_budget`,
+and updated goal-3's regression test to the renamed helper. Full suite green
+(177 passed).
+
+Adds honest live agent activity to the non-interactive CLI (lifecycle counts +
+named roster) by disk-polling the coordinator's `{run_dir}/.state/agents.json`
+snapshot — no change to the scan call signature. Opening PR, awaiting bugbot.

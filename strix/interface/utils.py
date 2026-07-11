@@ -104,6 +104,93 @@ def format_agent_counts(statuses: dict[str, str]) -> str:
     return " · ".join(f"{counts[s]} {s}" for s in ordered)
 
 
+def agent_activity_from_run_dir(run_dir: Any) -> dict[str, str]:
+    """Live agent status map read from the coordinator's on-disk snapshot.
+
+    Reads ``{run_dir}/.state/agents.json`` -- the same file the coordinator
+    rewrites atomically on every status change (agents.py:298-316, wired at
+    runner.py:105) and the TUI hydrates from (live_view.py:26-27). Returns the
+    real ``{agent_id: status}`` map, or an empty dict when the snapshot is
+    absent (scan not started / no agents yet), unreadable (a torn mid-write
+    read), corrupt, or malformed. Never raises -- the CLI refresh thread polls
+    this every tick and must never crash or dump a traceback over a transient
+    file state.
+    """
+    from strix.core.paths import runtime_state_dir
+
+    try:
+        agents_path = runtime_state_dir(Path(run_dir)) / "agents.json"
+        raw = agents_path.read_text(encoding="utf-8")
+        data = json.loads(raw)
+    except (OSError, ValueError, TypeError):
+        return {}
+
+    statuses = data.get("statuses") if isinstance(data, dict) else None
+    if not isinstance(statuses, dict):
+        return {}
+
+    return {
+        str(agent_id): str(status)
+        for agent_id, status in statuses.items()
+        if isinstance(agent_id, str) and isinstance(status, str)
+    }
+
+
+def _agent_names_from_run_dir(run_dir: Any) -> dict[str, str]:
+    """Best-effort ``{agent_id: friendly_name}`` from the same snapshot.
+
+    Shares the reader's fail-soft contract: any read/parse problem yields an
+    empty mapping so the roster simply falls back to agent ids.
+    """
+    from strix.core.paths import runtime_state_dir
+
+    try:
+        agents_path = runtime_state_dir(Path(run_dir)) / "agents.json"
+        data = json.loads(agents_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError, TypeError):
+        return {}
+
+    names = data.get("names") if isinstance(data, dict) else None
+    if not isinstance(names, dict):
+        return {}
+    return {
+        str(agent_id): str(name)
+        for agent_id, name in names.items()
+        if isinstance(agent_id, str) and isinstance(name, str)
+    }
+
+
+def build_agent_activity_text(run_dir: Any) -> Text:
+    """Honest live agent activity for the CLI panel: counts + named roster.
+
+    Sourced entirely from the coordinator snapshot via
+    :func:`agent_activity_from_run_dir`. Renders NOTHING (an empty ``Text``,
+    no header) when no agents are known yet -- so the panel never shows an
+    empty "Agents" heading or a fabricated line. When agents exist it shows
+    the lifecycle tally (via the existing :func:`format_agent_counts`, which
+    counts only statuses actually present) followed by one line per agent:
+    its real name and status. No percentages, no "complete", no invented
+    phase labels -- just the real graph state.
+    """
+    text = Text()
+    statuses = agent_activity_from_run_dir(run_dir)
+    if not statuses:
+        return text
+
+    names = _agent_names_from_run_dir(run_dir)
+
+    text.append("Agents ", style="dim")
+    text.append(format_agent_counts(statuses), style="white")
+
+    for agent_id, status in statuses.items():
+        text.append("\n  ")
+        text.append(names.get(agent_id, agent_id), style="white")
+        text.append("  ")
+        text.append(status, style="dim")
+
+    return text
+
+
 def format_model_turns(turn_count: int) -> str:
     """Render the cumulative model-turn counter as an honest plain count.
 

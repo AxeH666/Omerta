@@ -19,6 +19,7 @@ from strix.report.state import ReportState, set_global_report_state
 from strix.runtime import session_manager
 
 from .utils import (
+    build_agent_activity_text,
     build_live_stats_text,
     format_elapsed,
     format_model_turns,
@@ -147,10 +148,16 @@ async def run_cli(args: Any) -> None:  # noqa: PLR0915
         if stats_text:
             status_text.append(stats_text)
 
-        # Honest live feedback (additive) -- all values from the real
-        # report_state. Agent counts are intentionally omitted here: the CLI
-        # path does not have the live AgentCoordinator in scope, so a truthful
-        # count is not reachable without new plumbing.
+        # Honest live agent activity (additive), disk-polled from the
+        # coordinator's own snapshot at {run_dir}/.state/agents.json -- the
+        # same source the TUI hydrates from. No new scan plumbing: the file is
+        # written on every agent status change regardless of interface. Renders
+        # nothing until agents exist, so the panel never shows a fake line.
+        activity_text = build_agent_activity_text(report_state.get_run_dir())
+        if activity_text.plain:
+            status_text.append("\n")
+            status_text.append(activity_text)
+
         status_text.append("\n")
         status_text.append("Phase ", style="dim")
         status_text.append(scan_phase_label(report_state), style="white")
